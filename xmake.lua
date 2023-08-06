@@ -17,8 +17,9 @@ else
     set_languages("cxx20")
 end
 
-add_requires("asio")
+add_requires("cppzmq")
 add_requires("fmt")
+add_requires("protobuf-cpp")
 add_requires("spdlog")
 add_requireconfs("spdlog", {configs = {fmt_external = true}})
 add_defines("SPDLOG_FMT_EXTERNAL")
@@ -52,13 +53,18 @@ end
 
 target("CppNetwork")
     set_kind("binary")
-    add_headerfiles("include/**.hpp")
-    add_files("src/**.cpp")
-    add_includedirs("include")
 
-    add_packages("asio")
+    add_packages("cppzmq")
     add_packages("fmt")
+    add_packages("protobuf-cpp", {public = true})
     add_packages("spdlog")
+
+    add_rules("protobuf.cpp")
+
+    add_includedirs("include")
+    add_headerfiles("include/**.hpp")
+    add_files("proto/**.proto", {proto_public = true})
+    add_files("src/**.cpp")
 
     --after_build(function (target)
     --    import("core.project.config")

@@ -40,66 +40,59 @@ void signalHandler( int signal ) {
   bool isClient = args[1] == "client";
 
   if( isClient ) {
-    spdlog::debug( "Constructing Client" );
-    Client *myClient = new Client( "localhost", "13337" );
+    spdlog::trace( "Constructing Client" );
+    Client *myClient = new Client( "127.0.0.1", 13337 );
 
     signalCallback = [myClient]( int32_t signal ) {
-      spdlog::debug( "signalCallback( signal: {} )", signal );
+      spdlog::trace( "signalCallback( signal: {} )", signal );
       myClient->stopClient();
-      spdlog::debug( "signalCallback()~" );
+      myClient->waitForClient();
+      delete myClient;
+      spdlog::trace( "signalCallback()~" );
     };
 
-    spdlog::debug( "Calling Client::prepareClient" );
-    myClient->prepareClient( []( std::string const &msg ) {
-      spdlog::debug( "set_callback()" );
-      spdlog::debug( "Message: \"{}\"", msg );
-      spdlog::debug( "set_callback()~" );
-    } );
-    spdlog::debug( "Called Client::prepareClient" );
+    spdlog::trace( "Calling Client::startClient" );
+    myClient->startClient();
+    spdlog::trace( "Called Client::startClient" );
 
-    spdlog::debug( "Calling Client::runClient" );
-    myClient->runClient();
-    spdlog::debug( "Called Client::runClient" );
+    spdlog::trace( "Calling Client::sendMessage" );
+    myClient->sendMessage( "Hello" );
+    spdlog::trace( "Called Client::sendMessage" );
 
-    spdlog::debug( "Waiting for Client to stop" );
+    spdlog::trace( "Waiting for Client to stop" );
     myClient->waitForClient();
 
-    spdlog::debug( "Cleaning up Client" );
+    spdlog::trace( "Cleaning up Client" );
     delete myClient;
   } else {
-    spdlog::debug( "Constructing Server" );
+    spdlog::trace( "Constructing Server" );
     Server *myServer = new Server( 13337 );
 
     signalCallback = [myServer]( int32_t signal ) {
-      spdlog::debug( "signalCallback( signal: {} )", signal );
+      spdlog::trace( "signalCallback( signal: {} )", signal );
       myServer->stopServer();
-      spdlog::debug( "signalCallback()~" );
+      myServer->waitForServer();
+      delete myServer;
+      spdlog::trace( "signalCallback()~" );
     };
 
-    spdlog::debug( "Calling Server::prepareServer" );
-    myServer->prepareServer( []( uint16_t version ) {
-      spdlog::debug( "Server got v{} connection", version );
-      return "Hello World!";
-    } );
-    spdlog::debug( "Called Server::prepareServer" );
+    spdlog::trace( "Calling Server::startServer" );
+    myServer->startServer();
+    spdlog::trace( "Called Server::startServer" );
 
-    spdlog::debug( "Calling Server::runServer" );
-    myServer->runServer();
-    spdlog::debug( "Called Server::runServer" );
-
-    spdlog::debug( "Waiting for Server to stop" );
+    spdlog::trace( "Waiting for Server to stop" );
     myServer->waitForServer();
 
-    spdlog::debug( "Cleaning up Server" );
+    spdlog::trace( "Cleaning up Server" );
     delete myServer;
   }
 
-  spdlog::debug( "better_main()~" );
+  spdlog::trace( "better_main()~" );
   return EXIT_SUCCESS;
 }
 
 void InitializeLoggers( std::string filePostfix ) noexcept {
-  std::vector< std::string > allLoggerNames = { "Client", "Server" };
+  std::vector< std::string > allLoggerNames = { "ReqRepClient", "ReqRepServer", "Client", "Server" };
 
   auto consoleSink = std::make_shared< spdlog::sinks::stdout_color_sink_mt >();
   consoleSink->set_level( spdlog::level::level_enum::debug );
