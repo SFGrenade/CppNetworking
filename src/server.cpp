@@ -31,6 +31,7 @@ void Server::startServer() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
       this->server_.run();
+      std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
     }
     this->logger_->trace( "thread_()~" );
   } );
@@ -62,7 +63,7 @@ void Server::onSimpleRequest( SFG::Proto::SimpleRequest const& reqMsg ) {
   logger_->trace( "onSimpleRequest( reqMsg: \"{}\" )", reqMsg.message() );
 
   SFG::Proto::SimpleResponse* repMsg = new SFG::Proto::SimpleResponse();
-  repMsg->set_message( reqMsg.message() + "World" );
+  repMsg->set_message( reqMsg.message() + " World!" );
   server_.sendMessage( repMsg );
 
   logger_->trace( "onSimpleRequest()~" );

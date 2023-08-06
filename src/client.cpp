@@ -31,6 +31,7 @@ void Client::startClient() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
       this->client_.run();
+      std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
     }
     this->logger_->trace( "thread_()~" );
   } );
