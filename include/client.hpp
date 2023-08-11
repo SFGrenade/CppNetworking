@@ -21,6 +21,8 @@ class Client {
 
   void sendMessage( std::string const& message );
 
+  bool isWaitingForReply() const;
+
   private:
   void onSimpleResponse( SFG::Proto::SimpleResponse const& repMsg );
 
@@ -30,6 +32,7 @@ class Client {
   ZmqPbWrap::ReqRepClient client_;
   std::thread* thread_;
   bool loop_;
+  bool waitingForReply_;
 };
 
 }  // namespace SFG

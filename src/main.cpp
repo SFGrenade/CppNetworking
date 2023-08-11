@@ -55,9 +55,18 @@ void signalHandler( int signal ) {
     myClient->startClient();
     spdlog::trace( "Called Client::startClient" );
 
-    spdlog::trace( "Calling Client::sendMessage" );
-    myClient->sendMessage( "Hello" );
-    spdlog::trace( "Called Client::sendMessage" );
+    std::string readLine;
+    while( 1 ) {
+      while( myClient->isWaitingForReply() ) {
+      }
+      std::cout << "Write message: ";
+      std::getline( std::cin, readLine, '\n' );
+      if( readLine == "" ) {
+        myClient->stopClient();
+        break;
+      }
+      myClient->sendMessage( readLine );
+    }
 
     spdlog::trace( "Waiting for Client to stop" );
     myClient->waitForClient();

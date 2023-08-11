@@ -2,7 +2,8 @@
 
 namespace SFG {
 
-Client::Client( std::string const& host, uint16_t port ) : logger_( spdlog::get( "Client" ) ), client_( host, port ), thread_( nullptr ), loop_( false ) {
+Client::Client( std::string const& host, uint16_t port )
+    : logger_( spdlog::get( "Client" ) ), client_( host, port ), thread_( nullptr ), loop_( false ), waitingForReply_( false ) {
   logger_->trace( "Client()" );
   client_.subscribe( new SFG::Proto::SimpleResponse(), [this]( google::protobuf::Message const& message ) {
     this->onSimpleResponse( static_cast< SFG::Proto::SimpleResponse const& >( message ) );
@@ -66,13 +67,24 @@ void Client::sendMessage( std::string const& message ) {
   msg->set_message( message );
   client_.sendMessage( msg );
 
+  waitingForReply_ = true;
+
   logger_->trace( "sendMessage()~" );
+}
+
+bool Client::isWaitingForReply() const {
+  // logger_->trace( "isWaitingForReply()" );
+
+  // logger_->trace( "isWaitingForReply()~" );
+  return waitingForReply_;
 }
 
 void Client::onSimpleResponse( SFG::Proto::SimpleResponse const& repMsg ) {
   logger_->trace( "onSimpleResponse( repMsg: \"{}\" )", repMsg.message() );
 
-  stopClient();
+  std::cout << "[Server] " << repMsg.message() << std::endl;
+
+  waitingForReply_ = false;
 
   logger_->trace( "onSimpleResponse()~" );
 }
