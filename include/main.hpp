@@ -7,8 +7,9 @@
 #else
 #include <vector>
 #endif
-#include <string_view>
 #include <string>
+#include <string_view>
+
 
 namespace SFG {
 
@@ -19,6 +20,8 @@ namespace SFG {
 #endif
 
 void InitializeLoggers( std::string filePostfix ) noexcept;
+
+void InitializeSignalHandler() noexcept;
 
 }  // namespace SFG
 

@@ -2,7 +2,7 @@
 
 namespace SFG {
 
-Server::Server( uint16_t port ) : logger_( spdlog::get( "Server" ) ), server_( "*", port ), thread_( nullptr ), loop_( false ) {
+Server::Server( uint16_t port ) : logger_( spdlog::get( "Server" ) ), server_( "tcp://*", port ), thread_( nullptr ), loop_( false ) {
   logger_->trace( "Server()" );
   server_.subscribe( new SFG::Proto::SimpleRequest(), [this]( google::protobuf::Message const& message ) {
     this->onSimpleRequest( static_cast< SFG::Proto::SimpleRequest const& >( message ) );
