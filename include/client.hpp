@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CLIENT_HPP_
+#define CLIENT_HPP_
 
 #include <functional>
 #include <spdlog/spdlog.h>
@@ -36,3 +37,5 @@ class Client {
 };
 
 }  // namespace SFG
+
+#endif /* CLIENT_HPP_ */

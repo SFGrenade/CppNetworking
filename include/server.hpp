@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SERVER_HPP_
+#define SERVER_HPP_
 
 #include <functional>
 #include <spdlog/spdlog.h>
@@ -31,3 +32,5 @@ class Server {
 };
 
 }  // namespace SFG
+
+#endif /* SERVER_HPP_ */

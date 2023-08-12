@@ -1,4 +1,5 @@
-#pragma once
+#ifndef REQREPCLIENT_HPP_
+#define REQREPCLIENT_HPP_
 
 #include <functional>
 #include <google/protobuf/message.h>
@@ -37,3 +38,5 @@ class ReqRepClient {
 };
 
 }  // namespace ZmqPbWrap
+
+#endif /* REQREPCLIENT_HPP_ */

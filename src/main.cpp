@@ -20,7 +20,11 @@ void signalHandler( int signal ) {
   }
 }
 
-[[nodiscard]] int better_main( [[maybe_unused]] std::span< std::string_view const > args ) noexcept {
+#if __cplusplus >= 202002L
+[[nodiscard]] int better_main( [[maybe_unused]] std::span< std::string_view > args ) noexcept {
+#else
+[[nodiscard]] int better_main( [[maybe_unused]] std::vector< std::string_view > args ) noexcept {
+#endif
   if( ( args.size() != 2 ) || ( ( args[1] != "client" ) && ( args[1] != "server" ) ) ) {
     // only allow for `program client` or `program server`
     std::cerr << "call program like \"" << args[0] << " client\" or \"" << args[0] << " server\"" << std::endl;
@@ -29,19 +33,114 @@ void signalHandler( int signal ) {
   InitializeLoggers( std::string( args[1] ) );
   spdlog::trace( "better_main( args: \"{}\" )", fmt::join( args, "\", \"" ) );
 
+#ifdef SIGINT
   signal( SIGINT, signalHandler );
+#endif
+#ifdef SIGILL
   signal( SIGILL, signalHandler );
+#endif
+#ifdef SIGFPE
   signal( SIGFPE, signalHandler );
+#endif
+#ifdef SIGSEGV
   signal( SIGSEGV, signalHandler );
+#endif
+#ifdef SIGTERM
   signal( SIGTERM, signalHandler );
+#endif
+#ifdef SIGBREAK
   signal( SIGBREAK, signalHandler );
+#endif
+#ifdef SIGABRT
   signal( SIGABRT, signalHandler );
+#endif
+#ifdef SIGABRT_COMPAT
+  signal( SIGABRT_COMPAT, signalHandler );
+#endif
+#ifdef SIGHUP
+  signal( SIGHUP, signalHandler );
+#endif
+#ifdef SIGQUIT
+  signal( SIGQUIT, signalHandler );
+#endif
+#ifdef SIGTRAP
+  signal( SIGTRAP, signalHandler );
+#endif
+#ifdef SIGKILL
+  signal( SIGKILL, signalHandler );
+#endif
+#ifdef SIGBUS
+  signal( SIGBUS, signalHandler );
+#endif
+#ifdef SIGSYS
+  signal( SIGSYS, signalHandler );
+#endif
+#ifdef SIGPIPE
+  signal( SIGPIPE, signalHandler );
+#endif
+#ifdef SIGALRM
+  signal( SIGALRM, signalHandler );
+#endif
+#ifdef SIGURG
+  signal( SIGURG, signalHandler );
+#endif
+#ifdef SIGSTOP
+  signal( SIGSTOP, signalHandler );
+#endif
+#ifdef SIGTSTP
+  signal( SIGTSTP, signalHandler );
+#endif
+#ifdef SIGCONT
+  signal( SIGCONT, signalHandler );
+#endif
+#ifdef SIGCHLD
+  signal( SIGCHLD, signalHandler );
+#endif
+#ifdef SIGTTIN
+  signal( SIGTTIN, signalHandler );
+#endif
+#ifdef SIGTTOU
+  signal( SIGTTOU, signalHandler );
+#endif
+#ifdef SIGPOLL
+  signal( SIGPOLL, signalHandler );
+#endif
+#ifdef SIGXCPU
+  signal( SIGXCPU, signalHandler );
+#endif
+#ifdef SIGXFSZ
+  signal( SIGXFSZ, signalHandler );
+#endif
+#ifdef SIGVTALRM
+  signal( SIGVTALRM, signalHandler );
+#endif
+#ifdef SIGPROF
+  signal( SIGPROF, signalHandler );
+#endif
+#ifdef SIGUSR1
+  signal( SIGUSR1, signalHandler );
+#endif
+#ifdef SIGUSR2
+  signal( SIGUSR2, signalHandler );
+#endif
+#ifdef SIGWINCH
+  signal( SIGWINCH, signalHandler );
+#endif
+#ifdef SIGIO
+  signal( SIGIO, signalHandler );
+#endif
+#ifdef SIGIOT
+  signal( SIGIOT, signalHandler );
+#endif
+#ifdef SIGCLD
+  signal( SIGCLD, signalHandler );
+#endif
 
   bool isClient = args[1] == "client";
 
   if( isClient ) {
     spdlog::trace( "Constructing Client" );
-    Client *myClient = new Client( "127.0.0.1", 13337 );
+    Client *myClient = new Client( "sfgrena.de", 13337 );
 
     signalCallback = [myClient]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );

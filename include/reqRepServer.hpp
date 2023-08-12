@@ -1,4 +1,5 @@
-#pragma once
+#ifndef REQREPSERVER_HPP_
+#define REQREPSERVER_HPP_
 
 #include <functional>
 #include <google/protobuf/message.h>
@@ -37,3 +38,5 @@ class ReqRepServer {
 };
 
 }  // namespace ZmqPbWrap
+
+#endif /* REQREPSERVER_HPP_ */
