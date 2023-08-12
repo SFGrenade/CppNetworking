@@ -7,9 +7,12 @@
 #include <thread>
 
 #include "main.pb.h"
-#include "reqRepServer.hpp"
+#include "wrapper/reqRepServer.hpp"
 
 namespace SFG {
+
+namespace sfnw = SFG::Networking;
+namespace sfpb = SFG::Proto;
 
 class Server {
   public:
@@ -21,12 +24,12 @@ class Server {
   void stopServer();
 
   private:
-  void onSimpleRequest( SFG::Proto::SimpleRequest const& reqMsg );
+  void onSimpleRequest( sfpb::SimpleRequest const& reqMsg );
 
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  ZmqPbWrap::ReqRepServer server_;
+  sfnw::ReqRepServer server_;
   std::thread* thread_;
   bool loop_;
 };

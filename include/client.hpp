@@ -7,9 +7,12 @@
 #include <thread>
 
 #include "main.pb.h"
-#include "reqRepClient.hpp"
+#include "wrapper/reqRepClient.hpp"
 
 namespace SFG {
+
+namespace sfnw = SFG::Networking;
+namespace sfpb = SFG::Proto;
 
 class Client {
   public:
@@ -25,12 +28,12 @@ class Client {
   bool isWaitingForReply() const;
 
   private:
-  void onSimpleResponse( SFG::Proto::SimpleResponse const& repMsg );
+  void onSimpleResponse( sfpb::SimpleResponse const& repMsg );
 
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  ZmqPbWrap::ReqRepClient client_;
+  sfnw::ReqRepClient client_;
   std::thread* thread_;
   bool loop_;
   bool waitingForReply_;
