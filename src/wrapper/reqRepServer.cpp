@@ -1,33 +1,37 @@
-#include "reqRepClient.hpp"
+#include "wrapper/reqRepServer.hpp"
 
-namespace ZmqPbWrap {
+namespace SFG {
+namespace Networking {
 
-ReqRepClient::ReqRepClient( std::string const& host, uint16_t port )
-    : logger_( spdlog::get( "ReqRepClient" ) ),
+ReqRepServer::ReqRepServer( std::string const& host, uint16_t port )
+    : logger_( spdlog::get( "ReqRepServer" ) ),
       host_( host ),
       port_( port ),
       zmqContext_( 1, 1 ),
-      zmqSocket_( zmqContext_, zmq::socket_type::req ),
+      zmqSocket_( zmqContext_, zmq::socket_type::rep ),
       queueToSend_() {
-  logger_->trace( "ReqRepClient( host: \"{}\", port: {} )", host_, port_ );
+  logger_->trace( "ReqRepServer( host: \"{}\", port: {} )", host_, port_ );
 
-  zmqSocket_.connect( fmt::format( "tcp://{}:{}", host_, port_ ) );
+  zmqSocket_.bind( fmt::format( "{}:{}", host_, port_ ) );
 
-  logger_->trace( "ReqRepClient()~" );
+  logger_->trace( "ReqRepServer()~" );
 }
 
-ReqRepClient::~ReqRepClient() {
-  logger_->trace( "~ReqRepClient()" );
+ReqRepServer::~ReqRepServer() {
+  logger_->trace( "~ReqRepServer()" );
+
   for( int i = 0; i < subscribedMessages_.size(); i++ ) {
     delete subscribedMessages_[i];
   }
   zmqSocket_.close();
   zmqContext_.shutdown();
-  logger_->trace( "~ReqRepClient()~" );
+
+  logger_->trace( "~ReqRepServer()~" );
 }
 
-void ReqRepClient::subscribe( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback ) {
+void ReqRepServer::subscribe( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback ) {
   logger_->trace( "subscribe( message: {} (\"{}\"), callback )", static_cast< void* >( message ), message->GetTypeName() );
+
   bool contains = false;
   for( int i = 0; i < subscribedMessages_.size(); i++ ) {
     if( subscribedMessages_[i]->GetTypeName() == message->GetTypeName() ) {
@@ -40,10 +44,11 @@ void ReqRepClient::subscribe( google::protobuf::Message* message, std::function<
     subscribedMessages_.push_back( message );
     subscribedCallbacks_.push_back( callback );
   }
+
   logger_->trace( "subscribe()~" );
 }
 
-void ReqRepClient::sendMessage( google::protobuf::Message* message ) {
+void ReqRepServer::sendMessage( google::protobuf::Message* message ) {
   logger_->trace( "sendMessage( message: {} (\"{}\") )", static_cast< void* >( message ), message->GetTypeName() );
 
   mutexForSendQueue_.lock();
@@ -53,20 +58,8 @@ void ReqRepClient::sendMessage( google::protobuf::Message* message ) {
   logger_->trace( "sendMessage()~" );
 }
 
-void ReqRepClient::run() {
+void ReqRepServer::run() {
   // logger_->trace( "run()" );
-
-  if( queueToSend_.empty() ) {
-    // logger_->trace( "run()~" );
-    return;
-  }
-
-  mutexForSendQueue_.lock();
-  google::protobuf::Message* msgToSend = queueToSend_.front();
-  zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( msgToSend->SerializeAsString() ), zmq::send_flags::none );
-  queueToSend_.pop();
-  delete msgToSend;
-  mutexForSendQueue_.unlock();
 
   zmq::message_t receivedReply;
   zmq::recv_result_t recvResult = zmqSocket_.recv( receivedReply, zmq::recv_flags::none );
@@ -78,7 +71,18 @@ void ReqRepClient::run() {
     }
   }
 
+  while( queueToSend_.empty() ) {
+    // wait until queue has content
+  }
+  mutexForSendQueue_.lock();
+  google::protobuf::Message* msgToSend = queueToSend_.front();
+  zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( msgToSend->SerializeAsString() ), zmq::send_flags::none );
+  queueToSend_.pop();
+  delete msgToSend;
+  mutexForSendQueue_.unlock();
+
   // logger_->trace( "run()~" );
 }
 
-}  // namespace ZmqPbWrap
+}  // namespace Networking
+}  // namespace SFG

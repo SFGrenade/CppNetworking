@@ -10,7 +10,8 @@
 #include <vector>
 #include <zmq.hpp>
 
-namespace ZmqPbWrap {
+namespace SFG {
+namespace Networking {
 
 class ReqRepClient {
   public:
@@ -37,6 +38,7 @@ class ReqRepClient {
   std::vector< std::function< void( google::protobuf::Message const& ) > > subscribedCallbacks_;
 };
 
-}  // namespace ZmqPbWrap
+}  // namespace Networking
+}  // namespace SFG
 
 #endif /* REQREPCLIENT_HPP_ */
