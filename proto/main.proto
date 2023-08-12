@@ -2,9 +2,19 @@ syntax = "proto3";
 
 package SFG.Proto;
 
-message SimpleRequest {
+message Wrapper {
+  string protoName = 1;
+  string protoContent = 2;
+}
+
+message MessageRequest {
   string message = 1;
 }
-message SimpleResponse {
-  string message = 1;
+message MessageResponse {
+  bool success = 1;
+}
+
+message StopRequest {
+}
+message StopResponse {
 }

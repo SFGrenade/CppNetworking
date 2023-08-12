@@ -10,8 +10,9 @@
 #include <string>
 #include <string_view>
 
-
 namespace SFG {
+
+extern "C" void signalHandler( int sigNum );
 
 #if __cplusplus >= 202002L
 [[nodiscard]] int32_t better_main( [[maybe_unused]] std::span< std::string_view > args ) noexcept;

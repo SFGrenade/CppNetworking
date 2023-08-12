@@ -24,16 +24,19 @@ class Client {
   void stopClient();
 
   void sendMessage( std::string const& message );
+  void sendStop();
 
   bool isWaitingForReply() const;
+  bool isRunning() const;
 
   private:
-  void onSimpleResponse( sfpb::SimpleResponse const& repMsg );
+  void onMessageResponse( sfpb::MessageResponse const& repMsg );
+  void onStopResponse( sfpb::StopResponse const& repMsg );
 
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  sfnw::ReqRepClient client_;
+  sfnw::ReqRepClient* network_;
   std::thread* thread_;
   bool loop_;
   bool waitingForReply_;

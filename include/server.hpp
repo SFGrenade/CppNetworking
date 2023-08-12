@@ -7,7 +7,7 @@
 #include <thread>
 
 #include "main.pb.h"
-#include "wrapper/reqRepServer.hpp"
+#include "wrapper/reqRepClient.hpp"
 
 namespace SFG {
 
@@ -24,14 +24,16 @@ class Server {
   void stopServer();
 
   private:
-  void onSimpleRequest( sfpb::SimpleRequest const& reqMsg );
+  void onMessageRequest( sfpb::MessageRequest const& reqMsg );
+  void onStopRequest( sfpb::StopRequest const& reqMsg );
 
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  sfnw::ReqRepServer server_;
+  sfnw::ReqRepClient* network_;
   std::thread* thread_;
   bool loop_;
+  std::thread* stopThread_;
 };
 
 }  // namespace SFG

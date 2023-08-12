@@ -2,22 +2,44 @@
 
 namespace SFG {
 
-Server::Server( uint16_t port ) : logger_( spdlog::get( "Server" ) ), server_( "tcp://*", port ), thread_( nullptr ), loop_( false ) {
+Server::Server( uint16_t port )
+    : logger_( spdlog::get( "Server" ) ),
+      network_( new sfnw::ReqRepClient( "tcp://*", port, true ) ),
+      thread_( nullptr ),
+      loop_( false ),
+      stopThread_( nullptr ) {
   logger_->trace( "Server()" );
-  server_.subscribe( new SFG::Proto::SimpleRequest(), [this]( google::protobuf::Message const& message ) {
-    this->onSimpleRequest( static_cast< SFG::Proto::SimpleRequest const& >( message ) );
+  network_->subscribe( new SFG::Proto::MessageRequest(), [this]( google::protobuf::Message const& message ) {
+    this->onMessageRequest( static_cast< SFG::Proto::MessageRequest const& >( message ) );
+  } );
+  network_->subscribe( new SFG::Proto::StopRequest(), [this]( google::protobuf::Message const& message ) {
+    this->onStopRequest( static_cast< SFG::Proto::StopRequest const& >( message ) );
   } );
   logger_->trace( "Server()~" );
 }
 
 Server::~Server() {
   logger_->trace( "~Server()" );
+  if( network_ ) {
+    logger_->trace( "~Server - deleting network" );
+    delete network_;
+    network_ = nullptr;
+  }
   if( thread_ ) {
+    logger_->trace( "~Server - deleting thread" );
     if( thread_->joinable() ) {
       thread_->join();
     }
     delete thread_;
     thread_ = nullptr;
+  }
+  if( stopThread_ ) {
+    logger_->trace( "~Server - deleting stopThread" );
+    if( stopThread_->joinable() ) {
+      stopThread_->join();
+    }
+    delete stopThread_;
+    stopThread_ = nullptr;
   }
   logger_->trace( "~Server()~" );
 }
@@ -30,8 +52,10 @@ void Server::startServer() {
   thread_ = new std::thread( [this]() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
-      this->server_.run();
       std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+      if( this->network_ ) {
+        this->network_->run();
+      }
     }
     this->logger_->trace( "thread_()~" );
   } );
@@ -59,14 +83,27 @@ void Server::stopServer() {
   logger_->trace( "stopServer()~" );
 }
 
-void Server::onSimpleRequest( SFG::Proto::SimpleRequest const& reqMsg ) {
-  logger_->trace( "onSimpleRequest( reqMsg: \"{}\" )", reqMsg.message() );
+void Server::onMessageRequest( SFG::Proto::MessageRequest const& reqMsg ) {
+  logger_->trace( "onMessageRequest( reqMsg: \"{}\" )", reqMsg.message() );
 
-  SFG::Proto::SimpleResponse* repMsg = new SFG::Proto::SimpleResponse();
-  repMsg->set_message( reqMsg.message() + " World!" );
-  server_.sendMessage( repMsg );
+  SFG::Proto::MessageResponse* repMsg = new SFG::Proto::MessageResponse();
+  repMsg->set_success( true );
+  network_->sendMessage( repMsg );
 
-  logger_->trace( "onSimpleRequest()~" );
+  logger_->trace( "onMessageRequest()~" );
+}
+
+void Server::onStopRequest( sfpb::StopRequest const& reqMsg ) {
+  logger_->trace( "onStopRequest()" );
+
+  SFG::Proto::StopResponse* repMsg = new SFG::Proto::StopResponse();
+  network_->sendMessage( repMsg );
+  stopThread_ = new std::thread( [this]() {
+    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+    this->stopServer();
+  } );
+
+  logger_->trace( "onStopRequest()~" );
 }
 
 }  // namespace SFG

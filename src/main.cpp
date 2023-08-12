@@ -14,11 +14,11 @@
 namespace SFG {
 
 std::function< void( int32_t ) > signalCallback = nullptr;
-void signalHandler( int signal ) {
+void signalHandler( int sigNum ) {
+  signal( sigNum, signalHandler );
   if( signalCallback ) {
-    signalCallback( signal );
+    signalCallback( sigNum );
   }
-  return;
 }
 
 #if __cplusplus >= 202002L
@@ -45,7 +45,6 @@ void signalHandler( int signal ) {
     signalCallback = [myClient]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );
       myClient->stopClient();
-      myClient->waitForClient();
       delete myClient;
       spdlog::trace( "signalCallback()~" );
     };
@@ -55,16 +54,16 @@ void signalHandler( int signal ) {
     spdlog::trace( "Called Client::startClient" );
 
     std::string readLine;
-    while( 1 ) {
-      while( myClient->isWaitingForReply() ) {
-      }
+    while( myClient->isRunning() ) {
       std::cout << "Write message: ";
       std::getline( std::cin, readLine, '\n' );
-      if( readLine == "" ) {
-        myClient->stopClient();
-        break;
+      if( readLine == "" || readLine == "quit" || readLine == "stop" ) {
+        myClient->sendStop();
+      } else {
+        myClient->sendMessage( readLine );
       }
-      myClient->sendMessage( readLine );
+      while( myClient->isWaitingForReply() ) {
+      }
     }
 
     spdlog::trace( "Waiting for Client to stop" );
@@ -79,7 +78,6 @@ void signalHandler( int signal ) {
     signalCallback = [myServer]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );
       myServer->stopServer();
-      myServer->waitForServer();
       delete myServer;
       spdlog::trace( "signalCallback()~" );
     };
@@ -100,7 +98,7 @@ void signalHandler( int signal ) {
 }
 
 void InitializeLoggers( std::string filePostfix ) noexcept {
-  std::vector< std::string > allLoggerNames = { "ReqRepClient", "ReqRepServer", "Client", "Server" };
+  std::vector< std::string > allLoggerNames = { "ReqRepClient", "Client", "Server" };
 
   auto consoleSink = std::make_shared< spdlog::sinks::stdout_color_sink_mt >();
   consoleSink->set_level( spdlog::level::level_enum::debug );
@@ -133,108 +131,14 @@ void InitializeLoggers( std::string filePostfix ) noexcept {
 void InitializeSignalHandler() noexcept {
   spdlog::trace( "InitializeSignalHandler()" );
 
-#ifdef SIGINT
-  signal( SIGINT, signalHandler );
-#endif
-#ifdef SIGILL
-  signal( SIGILL, signalHandler );
-#endif
-#ifdef SIGFPE
-  signal( SIGFPE, signalHandler );
-#endif
-#ifdef SIGSEGV
-  signal( SIGSEGV, signalHandler );
-#endif
-#ifdef SIGTERM
-  signal( SIGTERM, signalHandler );
-#endif
-#ifdef SIGBREAK
-  signal( SIGBREAK, signalHandler );
-#endif
-#ifdef SIGABRT
-  signal( SIGABRT, signalHandler );
-#endif
-#ifdef SIGABRT_COMPAT
-  signal( SIGABRT_COMPAT, signalHandler );
-#endif
-#ifdef SIGHUP
-  signal( SIGHUP, signalHandler );
-#endif
-#ifdef SIGQUIT
-  signal( SIGQUIT, signalHandler );
-#endif
-#ifdef SIGTRAP
-  signal( SIGTRAP, signalHandler );
-#endif
-#ifdef SIGKILL
-  signal( SIGKILL, signalHandler );
-#endif
-#ifdef SIGBUS
-  signal( SIGBUS, signalHandler );
-#endif
-#ifdef SIGSYS
-  signal( SIGSYS, signalHandler );
-#endif
-#ifdef SIGPIPE
-  signal( SIGPIPE, signalHandler );
-#endif
-#ifdef SIGALRM
-  signal( SIGALRM, signalHandler );
-#endif
-#ifdef SIGURG
-  signal( SIGURG, signalHandler );
-#endif
-#ifdef SIGSTOP
-  signal( SIGSTOP, signalHandler );
-#endif
-#ifdef SIGTSTP
-  signal( SIGTSTP, signalHandler );
-#endif
-#ifdef SIGCONT
-  signal( SIGCONT, signalHandler );
-#endif
-#ifdef SIGCHLD
-  signal( SIGCHLD, signalHandler );
-#endif
-#ifdef SIGTTIN
-  signal( SIGTTIN, signalHandler );
-#endif
-#ifdef SIGTTOU
-  signal( SIGTTOU, signalHandler );
-#endif
-#ifdef SIGPOLL
-  signal( SIGPOLL, signalHandler );
-#endif
-#ifdef SIGXCPU
-  signal( SIGXCPU, signalHandler );
-#endif
-#ifdef SIGXFSZ
-  signal( SIGXFSZ, signalHandler );
-#endif
-#ifdef SIGVTALRM
-  signal( SIGVTALRM, signalHandler );
-#endif
-#ifdef SIGPROF
-  signal( SIGPROF, signalHandler );
-#endif
-#ifdef SIGUSR1
-  signal( SIGUSR1, signalHandler );
-#endif
-#ifdef SIGUSR2
-  signal( SIGUSR2, signalHandler );
-#endif
-#ifdef SIGWINCH
-  signal( SIGWINCH, signalHandler );
-#endif
-#ifdef SIGIO
-  signal( SIGIO, signalHandler );
-#endif
-#ifdef SIGIOT
-  signal( SIGIOT, signalHandler );
-#endif
-#ifdef SIGCLD
-  signal( SIGCLD, signalHandler );
-#endif
+  std::set_terminate( []() {
+    spdlog::trace( "terminateCallback()" );
+    spdlog::trace( "terminateCallback()~" );
+  } );
+  for( int i = 0; i <= NSIG; i++ ) {
+    _crt_signal_t retCode = signal( i, signalHandler );
+    spdlog::debug( "Installing handler for {}: {}", i, SIG_ERR != retCode );
+  }
 
   spdlog::trace( "InitializeSignalHandler()~" );
 }

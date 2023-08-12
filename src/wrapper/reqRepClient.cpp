@@ -1,18 +1,26 @@
 #include "wrapper/reqRepClient.hpp"
 
+#include "main.pb.h"
+
 namespace SFG {
 namespace Networking {
 
-ReqRepClient::ReqRepClient( std::string const& host, uint16_t port )
+ReqRepClient::ReqRepClient( std::string const& host, uint16_t port, bool isServer )
     : logger_( spdlog::get( "ReqRepClient" ) ),
       host_( host ),
       port_( port ),
+      isServer_( isServer ),
       zmqContext_( 1, 1 ),
-      zmqSocket_( zmqContext_, zmq::socket_type::req ),
-      queueToSend_() {
-  logger_->trace( "ReqRepClient( host: \"{}\", port: {} )", host_, port_ );
+      zmqSocket_( zmqContext_, isServer_ ? zmq::socket_type::rep : zmq::socket_type::req ),
+      queueToSend_(),
+      sending_( !isServer_ ) {
+  logger_->trace( "ReqRepClient( host: \"{}\", port: {}, isServer: {} )", host_, port_, isServer_ );
 
-  zmqSocket_.connect( fmt::format( "{}:{}", host_, port_ ) );
+  if( isServer_ ) {
+    zmqSocket_.bind( fmt::format( "{}:{}", host_, port_ ) );
+  } else {
+    zmqSocket_.connect( fmt::format( "{}:{}", host_, port_ ) );
+  }
 
   logger_->trace( "ReqRepClient()~" );
 }
@@ -57,25 +65,45 @@ void ReqRepClient::sendMessage( google::protobuf::Message* message ) {
 void ReqRepClient::run() {
   // logger_->trace( "run()" );
 
-  if( queueToSend_.empty() ) {
-    // logger_->trace( "run()~" );
-    return;
+  if( sending_ ) {
+    if( queueToSend_.empty() ) {
+      // logger_->trace( "run()~" );
+      return;
+    }
+    mutexForSendQueue_.lock();
+    google::protobuf::Message* msgToSend = queueToSend_.front();
+    SFG::Proto::Wrapper* actualMessage = new SFG::Proto::Wrapper();
+    actualMessage->set_protoname( msgToSend->GetTypeName() );
+    actualMessage->set_protocontent( msgToSend->SerializeAsString() );
+    zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( actualMessage->SerializeAsString() ), zmq::send_flags::dontwait );
+    delete actualMessage;
+    if( sendResult ) {
+      queueToSend_.pop();
+      delete msgToSend;
+      sending_ = false;
+    } else {
+      // logger_->warn( "No message sent!" );
+    }
+    mutexForSendQueue_.unlock();
   }
 
-  mutexForSendQueue_.lock();
-  google::protobuf::Message* msgToSend = queueToSend_.front();
-  zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( msgToSend->SerializeAsString() ), zmq::send_flags::none );
-  queueToSend_.pop();
-  delete msgToSend;
-  mutexForSendQueue_.unlock();
-
-  zmq::message_t receivedReply;
-  zmq::recv_result_t recvResult = zmqSocket_.recv( receivedReply, zmq::recv_flags::none );
-  if( recvResult ) {
-    for( int i = 0; i < subscribedMessages_.size(); i++ ) {
-      if( subscribedMessages_[i]->ParseFromString( receivedReply.to_string() ) ) {
+  if( !sending_ ) {
+    zmq::message_t receivedReply;
+    SFG::Proto::Wrapper receivedWrapper;
+    zmq::recv_result_t recvResult = zmqSocket_.recv( receivedReply, zmq::recv_flags::dontwait );
+    if( recvResult ) {
+      receivedWrapper.ParseFromString( receivedReply.to_string() );
+      for( int i = 0; i < subscribedMessages_.size(); i++ ) {
+        if( subscribedMessages_[i]->GetTypeName() != receivedWrapper.protoname() ) {
+          continue;
+        }
+        subscribedMessages_[i]->ParseFromString( receivedWrapper.protocontent() );
         subscribedCallbacks_[i]( *( subscribedMessages_[i] ) );
+        sending_ = true;
+        break;
       }
+    } else {
+      // logger_->warn( "No message received!" );
     }
   }
 
