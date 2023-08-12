@@ -3,16 +3,12 @@
 namespace SFG {
 
 Client::Client( std::string const& host, uint16_t port )
-    : logger_( spdlog::get( "Client" ) ),
-      network_( new sfnw::ReqRepClient( host, port, false ) ),
-      thread_( nullptr ),
-      loop_( false ),
-      waitingForReply_( false ) {
+    : logger_( spdlog::get( "Client" ) ), network_( host, port, false ), thread_( nullptr ), loop_( false ), waitingForReply_( false ) {
   logger_->trace( "Client()" );
-  network_->subscribe( new SFG::Proto::MessageResponse(), [this]( google::protobuf::Message const& message ) {
+  network_.subscribe( new SFG::Proto::MessageResponse(), [this]( google::protobuf::Message const& message ) {
     this->onMessageResponse( static_cast< SFG::Proto::MessageResponse const& >( message ) );
   } );
-  network_->subscribe( new SFG::Proto::StopResponse(), [this]( google::protobuf::Message const& message ) {
+  network_.subscribe( new SFG::Proto::StopResponse(), [this]( google::protobuf::Message const& message ) {
     this->onStopResponse( static_cast< SFG::Proto::StopResponse const& >( message ) );
   } );
   logger_->trace( "Client()~" );
@@ -20,10 +16,6 @@ Client::Client( std::string const& host, uint16_t port )
 
 Client::~Client() {
   logger_->trace( "~Client()" );
-  if( network_ ) {
-    delete network_;
-    network_ = nullptr;
-  }
   if( thread_ ) {
     if( thread_->joinable() ) {
       thread_->join();
@@ -43,9 +35,7 @@ void Client::startClient() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
       std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-      if( this->network_ ) {
-        this->network_->run();
-      }
+      this->network_.run();
     }
     this->logger_->trace( "thread_()~" );
   } );
@@ -78,7 +68,7 @@ void Client::sendMessage( std::string const& message ) {
 
   SFG::Proto::MessageRequest* msg = new SFG::Proto::MessageRequest();
   msg->set_message( message );
-  network_->sendMessage( msg );
+  network_.sendMessage( msg );
 
   waitingForReply_ = true;
 
@@ -89,7 +79,7 @@ void Client::sendStop() {
   logger_->trace( "sendStop()" );
 
   SFG::Proto::StopRequest* msg = new SFG::Proto::StopRequest();
-  network_->sendMessage( msg );
+  network_.sendMessage( msg );
 
   waitingForReply_ = true;
 

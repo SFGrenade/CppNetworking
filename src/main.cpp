@@ -40,7 +40,7 @@ void signalHandler( int sigNum ) {
 
   if( isClient ) {
     spdlog::trace( "Constructing Client" );
-    Client *myClient = new Client( "tcp://sfgrena.de", 13337 );
+    Client *myClient = new Client( "tcp://127.0.0.1", 13337 );
 
     signalCallback = [myClient]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );
@@ -98,7 +98,7 @@ void signalHandler( int sigNum ) {
 }
 
 void InitializeLoggers( std::string filePostfix ) noexcept {
-  std::vector< std::string > allLoggerNames = { "ReqRepClient", "Client", "Server" };
+  std::vector< std::string > allLoggerNames = { "ReqRep", "Client", "Server" };
 
   auto consoleSink = std::make_shared< spdlog::sinks::stdout_color_sink_mt >();
   consoleSink->set_level( spdlog::level::level_enum::debug );

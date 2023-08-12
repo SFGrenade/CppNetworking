@@ -1,12 +1,12 @@
-#include "wrapper/reqRepClient.hpp"
+#include "wrapper/reqRep.hpp"
 
 #include "main.pb.h"
 
 namespace SFG {
 namespace Networking {
 
-ReqRepClient::ReqRepClient( std::string const& host, uint16_t port, bool isServer )
-    : logger_( spdlog::get( "ReqRepClient" ) ),
+ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
+    : logger_( spdlog::get( "ReqRep" ) ),
       host_( host ),
       port_( port ),
       isServer_( isServer ),
@@ -14,7 +14,7 @@ ReqRepClient::ReqRepClient( std::string const& host, uint16_t port, bool isServe
       zmqSocket_( zmqContext_, isServer_ ? zmq::socket_type::rep : zmq::socket_type::req ),
       queueToSend_(),
       sending_( !isServer_ ) {
-  logger_->trace( "ReqRepClient( host: \"{}\", port: {}, isServer: {} )", host_, port_, isServer_ );
+  logger_->trace( "ReqRep( host: \"{}\", port: {}, isServer: {} )", host_, port_, isServer_ );
 
   if( isServer_ ) {
     zmqSocket_.bind( fmt::format( "{}:{}", host_, port_ ) );
@@ -22,20 +22,20 @@ ReqRepClient::ReqRepClient( std::string const& host, uint16_t port, bool isServe
     zmqSocket_.connect( fmt::format( "{}:{}", host_, port_ ) );
   }
 
-  logger_->trace( "ReqRepClient()~" );
+  logger_->trace( "ReqRep()~" );
 }
 
-ReqRepClient::~ReqRepClient() {
-  logger_->trace( "~ReqRepClient()" );
+ReqRep::~ReqRep() {
+  logger_->trace( "~ReqRep()" );
   for( int i = 0; i < subscribedMessages_.size(); i++ ) {
     delete subscribedMessages_[i];
   }
   zmqSocket_.close();
   zmqContext_.shutdown();
-  logger_->trace( "~ReqRepClient()~" );
+  logger_->trace( "~ReqRep()~" );
 }
 
-void ReqRepClient::subscribe( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback ) {
+void ReqRep::subscribe( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback ) {
   logger_->trace( "subscribe( message: {} (\"{}\"), callback )", static_cast< void* >( message ), message->GetTypeName() );
   bool contains = false;
   for( int i = 0; i < subscribedMessages_.size(); i++ ) {
@@ -52,7 +52,7 @@ void ReqRepClient::subscribe( google::protobuf::Message* message, std::function<
   logger_->trace( "subscribe()~" );
 }
 
-void ReqRepClient::sendMessage( google::protobuf::Message* message ) {
+void ReqRep::sendMessage( google::protobuf::Message* message ) {
   logger_->trace( "sendMessage( message: {} (\"{}\") )", static_cast< void* >( message ), message->GetTypeName() );
 
   mutexForSendQueue_.lock();
@@ -62,7 +62,7 @@ void ReqRepClient::sendMessage( google::protobuf::Message* message ) {
   logger_->trace( "sendMessage()~" );
 }
 
-void ReqRepClient::run() {
+void ReqRep::run() {
   // logger_->trace( "run()" );
 
   if( sending_ ) {

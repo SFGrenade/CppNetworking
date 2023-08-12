@@ -1,5 +1,5 @@
-#ifndef REQREPCLIENT_HPP_
-#define REQREPCLIENT_HPP_
+#ifndef REQREP_HPP_
+#define REQREP_HPP_
 
 #include <array>
 #include <functional>
@@ -14,10 +14,10 @@
 namespace SFG {
 namespace Networking {
 
-class ReqRepClient {
+class ReqRep {
   public:
-  ReqRepClient( std::string const& host, uint16_t port, bool isServer );
-  ~ReqRepClient();
+  ReqRep( std::string const& host, uint16_t port, bool isServer );
+  ~ReqRep();
 
   void subscribe( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback );
   void sendMessage( google::protobuf::Message* message );
@@ -44,4 +44,4 @@ class ReqRepClient {
 }  // namespace Networking
 }  // namespace SFG
 
-#endif /* REQREPCLIENT_HPP_ */
+#endif /* REQREP_HPP_ */

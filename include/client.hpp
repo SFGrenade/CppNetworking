@@ -7,7 +7,7 @@
 #include <thread>
 
 #include "main.pb.h"
-#include "wrapper/reqRepClient.hpp"
+#include "wrapper/reqRep.hpp"
 
 namespace SFG {
 
@@ -36,7 +36,7 @@ class Client {
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  sfnw::ReqRepClient* network_;
+  sfnw::ReqRep network_;
   std::thread* thread_;
   bool loop_;
   bool waitingForReply_;
