@@ -16,6 +16,7 @@ ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
       sending_( !isServer_ ) {
   logger_->trace( "ReqRep( host: \"{}\", port: {}, isServer: {} )", host_, port_, isServer_ );
 
+  zmqSocket_.setsockopt( ZMQ_LINGER, 0 );  // don't wait after destructor is called
   if( isServer_ ) {
     zmqSocket_.bind( fmt::format( "{}:{}", host_, port_ ) );
   } else {

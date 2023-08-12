@@ -42,8 +42,8 @@ void Server::startServer() {
   thread_ = new std::thread( [this]() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
-      std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
       this->network_.run();
+      std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
     }
     this->logger_->trace( "thread_()~" );
   } );
@@ -87,8 +87,10 @@ void Server::onStopRequest( sfpb::StopRequest const& reqMsg ) {
   SFG::Proto::StopResponse* repMsg = new SFG::Proto::StopResponse();
   network_.sendMessage( repMsg );
   stopThread_ = new std::thread( [this]() {
+    logger_->trace( "stopThread_()" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
     this->stopServer();
+    logger_->trace( "stopThread_()~" );
   } );
 
   logger_->trace( "onStopRequest()~" );

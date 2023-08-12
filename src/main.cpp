@@ -11,6 +11,24 @@
 #include "client.hpp"
 #include "server.hpp"
 
+namespace {
+// trim from start (in place)
+static inline void ltrim( std::string &s ) {
+  s.erase( s.begin(), std::find_if( s.begin(), s.end(), []( unsigned char ch ) { return !std::isspace( ch ); } ) );
+}
+
+// trim from end (in place)
+static inline void rtrim( std::string &s ) {
+  s.erase( std::find_if( s.rbegin(), s.rend(), []( unsigned char ch ) { return !std::isspace( ch ); } ).base(), s.end() );
+}
+
+// trim from both ends (in place)
+static inline void trim( std::string &s ) {
+  rtrim( s );
+  ltrim( s );
+}
+}  // namespace
+
 namespace SFG {
 
 std::function< void( int32_t ) > signalCallback = nullptr;
@@ -26,7 +44,7 @@ void signalHandler( int sigNum ) {
 #else
 [[nodiscard]] int better_main( [[maybe_unused]] std::vector< std::string_view > args ) noexcept {
 #endif
-  if( ( args.size() != 2 ) || ( ( args[1] != "client" ) && ( args[1] != "server" ) ) ) {
+  if( ( args.size() != 2 ) || ( ( args[1].contains( "client" ) ) && ( args[1].contains( "server" ) ) ) ) {
     // only allow for `program client` or `program server`
     std::cerr << "call program like \"" << args[0] << " client\" or \"" << args[0] << " server\"" << std::endl;
     return EXIT_FAILURE;
@@ -36,7 +54,7 @@ void signalHandler( int sigNum ) {
 
   InitializeSignalHandler();
 
-  bool isClient = args[1] == "client";
+  bool isClient = args[1].contains( "client" );
 
   if( isClient ) {
     spdlog::trace( "Constructing Client" );
@@ -45,7 +63,7 @@ void signalHandler( int sigNum ) {
     signalCallback = [myClient]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );
       myClient->stopClient();
-      delete myClient;
+      // delete myClient;
       spdlog::trace( "signalCallback()~" );
     };
 
@@ -57,7 +75,11 @@ void signalHandler( int sigNum ) {
     while( myClient->isRunning() ) {
       std::cout << "Write message: ";
       std::getline( std::cin, readLine, '\n' );
-      if( readLine == "" || readLine == "quit" || readLine == "stop" ) {
+      trim( readLine );
+      if( readLine == "" ) {
+        continue;
+      }
+      if( readLine == "quit" || readLine == "stop" ) {
         myClient->sendStop();
       } else {
         myClient->sendMessage( readLine );
@@ -78,7 +100,7 @@ void signalHandler( int sigNum ) {
     signalCallback = [myServer]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );
       myServer->stopServer();
-      delete myServer;
+      // delete myServer;
       spdlog::trace( "signalCallback()~" );
     };
 

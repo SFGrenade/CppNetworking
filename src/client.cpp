@@ -34,8 +34,8 @@ void Client::startClient() {
   thread_ = new std::thread( [this]() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
-      std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
       this->network_.run();
+      std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
     }
     this->logger_->trace( "thread_()~" );
   } );
