@@ -13,8 +13,3 @@ message MessageRequest {
 message MessageResponse {
   bool success = 1;
 }
-
-message StopRequest {
-}
-message StopResponse {
-}

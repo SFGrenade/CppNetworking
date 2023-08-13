@@ -80,10 +80,10 @@ void signalHandler( int sigNum ) {
         continue;
       }
       if( readLine == "quit" || readLine == "stop" ) {
-        myClient->sendStop();
-      } else {
-        myClient->sendMessage( readLine );
+        myClient->stopClient();
+        break;
       }
+      myClient->sendMessage( readLine );
       while( myClient->isWaitingForReply() ) {
       }
     }

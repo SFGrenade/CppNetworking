@@ -16,6 +16,9 @@ namespace Networking {
 
 class ReqRep {
   public:
+  enum class Status { Sending, Receiving };
+
+  public:
   ReqRep( std::string const& host, uint16_t port, bool isServer );
   ~ReqRep();
 
@@ -24,12 +27,15 @@ class ReqRep {
 
   void run();
 
+  ReqRep::Status status() const;
+
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
   std::string host_;
   uint16_t port_;
   bool isServer_;
+  ReqRep::Status status_;
 
   zmq::context_t zmqContext_;
   zmq::socket_t zmqSocket_;
@@ -38,7 +44,6 @@ class ReqRep {
   std::queue< google::protobuf::Message* > queueToSend_;
   std::vector< google::protobuf::Message* > subscribedMessages_;
   std::vector< std::function< void( google::protobuf::Message const& ) > > subscribedCallbacks_;
-  bool sending_;
 };
 
 }  // namespace Networking

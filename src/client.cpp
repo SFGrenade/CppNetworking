@@ -3,13 +3,10 @@
 namespace SFG {
 
 Client::Client( std::string const& host, uint16_t port )
-    : logger_( spdlog::get( "Client" ) ), network_( host, port, false ), thread_( nullptr ), loop_( false ), waitingForReply_( false ) {
+    : logger_( spdlog::get( "Client" ) ), network_( host, port, false ), thread_( nullptr ), loop_( false ) {
   logger_->trace( "Client()" );
   network_.subscribe( new SFG::Proto::MessageResponse(), [this]( google::protobuf::Message const& message ) {
     this->onMessageResponse( static_cast< SFG::Proto::MessageResponse const& >( message ) );
-  } );
-  network_.subscribe( new SFG::Proto::StopResponse(), [this]( google::protobuf::Message const& message ) {
-    this->onStopResponse( static_cast< SFG::Proto::StopResponse const& >( message ) );
   } );
   logger_->trace( "Client()~" );
 }
@@ -70,27 +67,14 @@ void Client::sendMessage( std::string const& message ) {
   msg->set_message( message );
   network_.sendMessage( msg );
 
-  waitingForReply_ = true;
-
   logger_->trace( "sendMessage()~" );
-}
-
-void Client::sendStop() {
-  logger_->trace( "sendStop()" );
-
-  SFG::Proto::StopRequest* msg = new SFG::Proto::StopRequest();
-  network_.sendMessage( msg );
-
-  waitingForReply_ = true;
-
-  logger_->trace( "sendStop()~" );
 }
 
 bool Client::isWaitingForReply() const {
   // logger_->trace( "isWaitingForReply()" );
 
   // logger_->trace( "isWaitingForReply()~" );
-  return waitingForReply_ && isRunning();
+  return ( network_.status() == SFG::Networking::ReqRep::Status::Receiving ) && isRunning();
 }
 
 bool Client::isRunning() const {
@@ -103,17 +87,7 @@ bool Client::isRunning() const {
 void Client::onMessageResponse( SFG::Proto::MessageResponse const& repMsg ) {
   logger_->trace( "onMessageResponse( success: \"{}\" )", repMsg.success() );
 
-  waitingForReply_ = false;
-
   logger_->trace( "onMessageResponse()~" );
-}
-
-void Client::onStopResponse( SFG::Proto::StopResponse const& repMsg ) {
-  logger_->trace( "onStopResponse()" );
-
-  stopClient();
-
-  logger_->trace( "onStopResponse()~" );
 }
 
 }  // namespace SFG

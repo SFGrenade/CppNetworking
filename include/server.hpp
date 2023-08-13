@@ -11,9 +11,6 @@
 
 namespace SFG {
 
-namespace sfnw = SFG::Networking;
-namespace sfpb = SFG::Proto;
-
 class Server {
   public:
   Server( uint16_t port );
@@ -24,16 +21,14 @@ class Server {
   void stopServer();
 
   private:
-  void onMessageRequest( sfpb::MessageRequest const& reqMsg );
-  void onStopRequest( sfpb::StopRequest const& reqMsg );
+  void onMessageRequest( SFG::Proto::MessageRequest const& reqMsg );
 
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  sfnw::ReqRep network_;
+  SFG::Networking::ReqRep network_;
   std::thread* thread_;
   bool loop_;
-  std::thread* stopThread_;
 };
 
 }  // namespace SFG

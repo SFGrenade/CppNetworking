@@ -10,10 +10,10 @@ ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
       host_( host ),
       port_( port ),
       isServer_( isServer ),
+      status_( isServer_ ? ReqRep::Status::Receiving : ReqRep::Status::Sending ),
       zmqContext_( 1, 1 ),
       zmqSocket_( zmqContext_, isServer_ ? zmq::socket_type::rep : zmq::socket_type::req ),
-      queueToSend_(),
-      sending_( !isServer_ ) {
+      queueToSend_() {
   logger_->trace( "ReqRep( host: \"{}\", port: {}, isServer: {} )", host_, port_, isServer_ );
 
   zmqSocket_.setsockopt( ZMQ_LINGER, 0 );  // don't wait after destructor is called
@@ -66,7 +66,7 @@ void ReqRep::sendMessage( google::protobuf::Message* message ) {
 void ReqRep::run() {
   // logger_->trace( "run()" );
 
-  if( sending_ ) {
+  if( status_ == ReqRep::Status::Sending ) {
     if( queueToSend_.empty() ) {
       // logger_->trace( "run()~" );
       return;
@@ -81,14 +81,14 @@ void ReqRep::run() {
     if( sendResult ) {
       queueToSend_.pop();
       delete msgToSend;
-      sending_ = false;
+      status_ = ReqRep::Status::Receiving;
     } else {
       // logger_->warn( "No message sent!" );
     }
     mutexForSendQueue_.unlock();
   }
 
-  if( !sending_ ) {
+  if( status_ == ReqRep::Status::Receiving ) {
     zmq::message_t receivedReply;
     SFG::Proto::Wrapper receivedWrapper;
     zmq::recv_result_t recvResult = zmqSocket_.recv( receivedReply, zmq::recv_flags::dontwait );
@@ -100,7 +100,7 @@ void ReqRep::run() {
         }
         subscribedMessages_[i]->ParseFromString( receivedWrapper.protocontent() );
         subscribedCallbacks_[i]( *( subscribedMessages_[i] ) );
-        sending_ = true;
+        status_ = ReqRep::Status::Sending;
         break;
       }
     } else {
@@ -109,6 +109,13 @@ void ReqRep::run() {
   }
 
   // logger_->trace( "run()~" );
+}
+
+ReqRep::Status ReqRep::status() const {
+  logger_->trace( "status()" );
+
+  logger_->trace( "status()~" );
+  return status_;
 }
 
 }  // namespace Networking
