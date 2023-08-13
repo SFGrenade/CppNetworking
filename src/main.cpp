@@ -40,11 +40,17 @@ void signalHandler( int sigNum ) {
 }
 
 #if __cplusplus >= 202002L
+#define STRING_CONTAINS( str1, str2 ) ( str1 ).contains( ( str2 ) )
+#else
+#define STRING_CONTAINS( str1, str2 ) ( str1 ).find( ( str2 ) ) != std::string::npos
+#endif
+
+#if __cplusplus >= 202002L
 [[nodiscard]] int better_main( [[maybe_unused]] std::span< std::string_view > args ) noexcept {
 #else
 [[nodiscard]] int better_main( [[maybe_unused]] std::vector< std::string_view > args ) noexcept {
 #endif
-  if( ( args.size() != 2 ) || ( ( args[1].contains( "client" ) ) && ( args[1].contains( "server" ) ) ) ) {
+  if( ( args.size() != 2 ) || ( ( STRING_CONTAINS( args[1], "client" ) ) && ( STRING_CONTAINS( args[1], "server" ) ) ) ) {
     // only allow for `program client` or `program server`
     std::cerr << "call program like \"" << args[0] << " client\" or \"" << args[0] << " server\"" << std::endl;
     return EXIT_FAILURE;
@@ -54,7 +60,7 @@ void signalHandler( int sigNum ) {
 
   InitializeSignalHandler();
 
-  bool isClient = args[1].contains( "client" );
+  bool isClient = STRING_CONTAINS( args[1], "client" );
 
   if( isClient ) {
     spdlog::trace( "Constructing Client" );
@@ -158,7 +164,7 @@ void InitializeSignalHandler() noexcept {
     spdlog::trace( "terminateCallback()~" );
   } );
   for( int i = 0; i <= NSIG; i++ ) {
-    _crt_signal_t retCode = signal( i, signalHandler );
+    auto retCode = signal( i, signalHandler );
     spdlog::debug( "Installing handler for {}: {}", i, SIG_ERR != retCode );
   }
 
