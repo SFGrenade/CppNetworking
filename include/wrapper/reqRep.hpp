@@ -11,39 +11,22 @@
 #include <vector>
 #include <zmq.hpp>
 
+#include "wrapper/zmqWrap.hpp"
+
 namespace SFG {
 namespace Networking {
 
-class ReqRep {
-  public:
-  enum class Status { Sending, Receiving };
-
+class ReqRep : public ZmqWrap {
   public:
   ReqRep( std::string const& host, uint16_t port, bool isServer );
   ~ReqRep();
 
-  void subscribe( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback );
-  void sendMessage( google::protobuf::Message* message );
-
-  void run();
-
-  ReqRep::Status status() const;
+  virtual void run() override;
 
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  std::string host_;
-  uint16_t port_;
   bool isServer_;
-  ReqRep::Status status_;
-
-  zmq::context_t zmqContext_;
-  zmq::socket_t zmqSocket_;
-
-  std::mutex mutexForSendQueue_;
-  std::queue< google::protobuf::Message* > queueToSend_;
-  std::vector< google::protobuf::Message* > subscribedMessages_;
-  std::vector< std::function< void( google::protobuf::Message const& ) > > subscribedCallbacks_;
 };
 
 }  // namespace Networking

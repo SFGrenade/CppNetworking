@@ -126,7 +126,7 @@ void signalHandler( int sigNum ) {
 }
 
 void InitializeLoggers( std::string filePostfix ) noexcept {
-  std::vector< std::string > allLoggerNames = { "ReqRep", "Client", "Server" };
+  std::vector< std::string > allLoggerNames = { "ReqRep", "ZmqWrap", "Client", "Server" };
 
   auto consoleSink = std::make_shared< spdlog::sinks::stdout_color_sink_mt >();
   consoleSink->set_level( spdlog::level::level_enum::debug );
