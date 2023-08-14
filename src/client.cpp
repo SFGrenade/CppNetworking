@@ -3,7 +3,7 @@
 namespace SFG {
 
 Client::Client( std::string const& host, uint16_t port )
-    : logger_( spdlog::get( "Client" ) ), network_( host, port, false ), thread_( nullptr ), loop_( false ) {
+    : logger_( spdlog::get( "Client" ) ), network_( host, port, false ), thread_( nullptr ), loop_( false ), waitingForMessageResponse_( false ) {
   logger_->trace( "Client()" );
   network_.subscribe( new SFG::Proto::MessageResponse(), [this]( google::protobuf::Message const& message ) {
     this->onMessageResponse( static_cast< SFG::Proto::MessageResponse const& >( message ) );
@@ -32,7 +32,7 @@ void Client::startClient() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
       this->network_.run();
-      std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+      std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     }
     this->logger_->trace( "thread_()~" );
   } );
@@ -66,6 +66,7 @@ void Client::sendMessage( std::string const& message ) {
   SFG::Proto::MessageRequest* msg = new SFG::Proto::MessageRequest();
   msg->set_message( message );
   network_.sendMessage( msg );
+  waitingForMessageResponse_ = true;
 
   logger_->trace( "sendMessage()~" );
 }
@@ -74,7 +75,7 @@ bool Client::isWaitingForReply() const {
   // logger_->trace( "isWaitingForReply()" );
 
   // logger_->trace( "isWaitingForReply()~" );
-  return ( network_.status() == SFG::Networking::ReqRep::Status::Receiving ) && isRunning();
+  return waitingForMessageResponse_ && isRunning();
 }
 
 bool Client::isRunning() const {
@@ -86,6 +87,8 @@ bool Client::isRunning() const {
 
 void Client::onMessageResponse( SFG::Proto::MessageResponse const& repMsg ) {
   logger_->trace( "onMessageResponse( success: \"{}\" )", repMsg.success() );
+
+  waitingForMessageResponse_ = false;
 
   logger_->trace( "onMessageResponse()~" );
 }

@@ -34,6 +34,7 @@ class Client {
   SFG::Networking::ReqRep network_;
   std::thread* thread_;
   bool loop_;
+  bool waitingForMessageResponse_;
 };
 
 }  // namespace SFG
