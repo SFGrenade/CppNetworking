@@ -6,16 +6,28 @@ namespace SFG {
 namespace Networking {
 
 ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
-    : ZmqWrap( host, port, isServer ? ZmqWrap::Status::Receiving : ZmqWrap::Status::Sending, isServer ? zmq::socket_type::rep : zmq::socket_type::req ),
+    : ZmqWrap( host, port, isServer ? zmq::socket_type::rep : zmq::socket_type::req ),
       logger_( spdlog::get( "ReqRep" ) ),
-      isServer_( isServer ) {
+      isServer_( isServer ),
+      sendFlag_( !isServer ) {
   logger_->trace( "ReqRep( host: \"{}\", port: {}, isServer: {} )", host_, port_, isServer_ );
 
   if( isServer_ ) {
-    zmqSocket_.bind( fmt::format( "{}:{}", host_, port_ ) );
+    logger_->trace( "ReqRep - 1" );
+    try {
+      zmqSocket_.bind( fmt::format( "{}:{}", host_, port_ ) );
+    } catch( const std::exception& e ) {
+      logger_->error( "Error during bind: {}", e.what() );
+    }
   } else {
-    zmqSocket_.connect( fmt::format( "{}:{}", host_, port_ ) );
+    logger_->trace( "ReqRep - 2" );
+    try {
+      zmqSocket_.connect( fmt::format( "{}:{}", host_, port_ ) );
+    } catch( const std::exception& e ) {
+      logger_->error( "Error during bind: {}", e.what() );
+    }
   }
+  logger_->trace( "ReqRep - 3" );
 
   logger_->trace( "ReqRep()~" );
 }
@@ -26,52 +38,34 @@ ReqRep::~ReqRep() {
   logger_->trace( "~ReqRep()~" );
 }
 
-void ReqRep::run() {
-  // logger_->trace( "run()" );
+bool ReqRep::canSend() const {
+  // logger_->trace( "canSend()" );
 
-  if( status() == ZmqWrap::Status::Sending ) {
-    if( queueToSend_.empty() ) {
-      // logger_->trace( "run()~" );
-      return;
-    }
-    mutexForSendQueue_.lock();
-    google::protobuf::Message* msgToSend = queueToSend_.front();
-    SFG::Proto::Wrapper* actualMessage = new SFG::Proto::Wrapper();
-    actualMessage->set_protoname( msgToSend->GetTypeName() );
-    actualMessage->set_protocontent( msgToSend->SerializeAsString() );
-    zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( actualMessage->SerializeAsString() ), zmq::send_flags::dontwait );
-    delete actualMessage;
-    if( sendResult ) {
-      queueToSend_.pop();
-      delete msgToSend;
-      setStatus( ZmqWrap::Status::Receiving );
-    } else {
-      // logger_->warn( "No message sent!" );
-    }
-    mutexForSendQueue_.unlock();
-  }
+  // logger_->trace( "canSend()~" );
+  return sendFlag_;
+}
 
-  if( status() == ZmqWrap::Status::Receiving ) {
-    zmq::message_t receivedReply;
-    SFG::Proto::Wrapper receivedWrapper;
-    zmq::recv_result_t recvResult = zmqSocket_.recv( receivedReply, zmq::recv_flags::dontwait );
-    if( recvResult ) {
-      receivedWrapper.ParseFromString( receivedReply.to_string() );
-      for( int i = 0; i < subscribedMessages_.size(); i++ ) {
-        if( subscribedMessages_[i]->GetTypeName() != receivedWrapper.protoname() ) {
-          continue;
-        }
-        subscribedMessages_[i]->ParseFromString( receivedWrapper.protocontent() );
-        subscribedCallbacks_[i]( *( subscribedMessages_[i] ) );
-        setStatus( ZmqWrap::Status::Sending );
-        break;
-      }
-    } else {
-      // logger_->warn( "No message received!" );
-    }
-  }
+void ReqRep::didSend() {
+  logger_->trace( "didSend()" );
 
-  // logger_->trace( "run()~" );
+  sendFlag_ = false;
+
+  logger_->trace( "didSend()~" );
+}
+
+bool ReqRep::canRecv() const {
+  // logger_->trace( "canRecv()" );
+
+  // logger_->trace( "canRecv()~" );
+  return !sendFlag_;
+}
+
+void ReqRep::didRecv() {
+  logger_->trace( "didRecv()" );
+
+  sendFlag_ = true;
+
+  logger_->trace( "didRecv()~" );
 }
 
 }  // namespace Networking

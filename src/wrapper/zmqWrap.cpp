@@ -5,19 +5,13 @@
 namespace SFG {
 namespace Networking {
 
-ZmqWrap::ZmqWrap( std::string const& host, uint16_t port, ZmqWrap::Status startingStatus, zmq::socket_type socketType )
-    : logger_( spdlog::get( "ZmqWrap" ) ),
-      host_( host ),
-      port_( port ),
-      status_( startingStatus ),
-      zmqContext_( 1, 1 ),
-      zmqSocket_( zmqContext_, socketType ),
-      queueToSend_() {
-  logger_->trace( "ZmqWrap( host: \"{}\", port: {}, startingStatus: {}, socketType: {} )",
-                  host,
-                  port,
-                  static_cast< int >( startingStatus ),
-                  static_cast< int >( socketType ) );
+Subscription::Subscription() : message( nullptr ), callback( nullptr ) {}
+Subscription::Subscription( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback )
+    : message( message ), callback( callback ) {}
+
+ZmqWrap::ZmqWrap( std::string const& host, uint16_t port, zmq::socket_type socketType )
+    : logger_( spdlog::get( "ZmqWrap" ) ), host_( host ), port_( port ), zmqContext_( 1, 1 ), zmqSocket_( zmqContext_, socketType ), queueToSend_() {
+  logger_->trace( "ZmqWrap( host: \"{}\", port: {}, socketType: {} )", host, port, static_cast< int >( socketType ) );
 
   zmqSocket_.set( zmq::sockopt::linger, 0 );  // don't wait after destructor is called
 
@@ -33,9 +27,10 @@ ZmqWrap::~ZmqWrap() {
     }
     queueToSend_.pop();
   }
-  for( int i = 0; i < subscribedMessages_.size(); i++ ) {
-    delete subscribedMessages_[i];
+  for( auto pair : subscribedMessages_ ) {
+    delete pair.second.message;
   }
+  subscribedMessages_.clear();
   zmqSocket_.close();
   zmqContext_.shutdown();
   logger_->trace( "~ZmqWrap()~" );
@@ -43,17 +38,14 @@ ZmqWrap::~ZmqWrap() {
 
 void ZmqWrap::subscribe( google::protobuf::Message* message, std::function< void( google::protobuf::Message const& ) > callback ) {
   logger_->trace( "subscribe( message: {} (\"{}\"), callback )", static_cast< void* >( message ), message->GetTypeName() );
-  bool contains = false;
-  for( int i = 0; i < subscribedMessages_.size(); i++ ) {
-    if( subscribedMessages_[i]->GetTypeName() == message->GetTypeName() ) {
-      contains = true;
-      break;
-    }
-  }
-  if( !contains ) {
+  std::string messageType = message->GetTypeName();
+  auto found = subscribedMessages_.find( messageType );
+  if( found != subscribedMessages_.end() ) {
+    logger_->trace( "subscribe - changing callback" );
+    subscribedMessages_[messageType].callback = callback;
+  } else {
     logger_->trace( "subscribe - adding message to subscribed list" );
-    subscribedMessages_.push_back( message );
-    subscribedCallbacks_.push_back( callback );
+    subscribedMessages_[messageType] = Subscription{ message, callback };
   }
   logger_->trace( "subscribe()~" );
 }
@@ -68,19 +60,49 @@ void ZmqWrap::sendMessage( google::protobuf::Message* message ) {
   logger_->trace( "sendMessage()~" );
 }
 
-ZmqWrap::Status ZmqWrap::status() const {
-  // logger_->trace( "status()" );
+void ZmqWrap::run() {
+  // logger_->trace( "run()" );
 
-  // logger_->trace( "status()~" );
-  return status_;
-}
+  if( canSend() ) {
+    while( !queueToSend_.empty() ) {
+      mutexForSendQueue_.lock();
+      google::protobuf::Message* msgToSend = queueToSend_.front();
+      SFG::Proto::Wrapper* actualMessage = new SFG::Proto::Wrapper();
+      actualMessage->set_protoname( msgToSend->GetTypeName() );
+      actualMessage->set_protocontent( msgToSend->SerializeAsString() );
+      zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( actualMessage->SerializeAsString() ), zmq::send_flags::dontwait );
+      delete actualMessage;
+      if( sendResult ) {
+        queueToSend_.pop();
+        delete msgToSend;
+        didSend();
+      } else {
+        // logger_->warn( "No message sent!" );
+      }
+      mutexForSendQueue_.unlock();
+    }
+  }
 
-void ZmqWrap::setStatus( ZmqWrap::Status newStatus ) {
-  logger_->trace( "setStatus( newStatus: {} )", static_cast< int >( newStatus ) );
+  if( canRecv() ) {
+    zmq::message_t receivedReply;
+    SFG::Proto::Wrapper receivedWrapper;
+    zmq::recv_result_t recvResult = zmqSocket_.recv( receivedReply, zmq::recv_flags::dontwait );
+    if( recvResult ) {
+      receivedWrapper.ParseFromString( receivedReply.to_string() );
+      auto found = subscribedMessages_.find( receivedWrapper.protoname() );
+      if( found != subscribedMessages_.end() ) {
+        found->second.message->ParseFromString( receivedWrapper.protocontent() );
+        found->second.callback( *( found->second.message ) );
+        didRecv();
+      } else {
+        throw std::runtime_error( fmt::format( "Topic '{}' not subscribed!", receivedWrapper.protoname() ) );
+      }
+    } else {
+      // logger_->warn( "No message received!" );
+    }
+  }
 
-  status_ = newStatus;
-
-  logger_->trace( "setStatus()~" );
+  // logger_->trace( "run()~" );
 }
 
 }  // namespace Networking

@@ -21,12 +21,17 @@ class ReqRep : public ZmqWrap {
   ReqRep( std::string const& host, uint16_t port, bool isServer );
   ~ReqRep();
 
-  virtual void run() override;
+  protected:
+  virtual bool canSend() const override;
+  virtual void didSend() override;
+  virtual bool canRecv() const override;
+  virtual void didRecv() override;
 
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
   bool isServer_;
+  bool sendFlag_;
 };
 
 }  // namespace Networking
