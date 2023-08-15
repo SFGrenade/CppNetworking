@@ -64,23 +64,21 @@ void ZmqWrap::run() {
   // logger_->trace( "run()" );
 
   if( canSend() ) {
-    while( !queueToSend_.empty() ) {
-      mutexForSendQueue_.lock();
-      google::protobuf::Message* msgToSend = queueToSend_.front();
-      SFG::Proto::Wrapper* actualMessage = new SFG::Proto::Wrapper();
-      actualMessage->set_protoname( msgToSend->GetTypeName() );
-      actualMessage->set_protocontent( msgToSend->SerializeAsString() );
-      zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( actualMessage->SerializeAsString() ), zmq::send_flags::dontwait );
-      delete actualMessage;
-      if( sendResult ) {
-        queueToSend_.pop();
-        delete msgToSend;
-        didSend();
-      } else {
-        // logger_->warn( "No message sent!" );
-      }
-      mutexForSendQueue_.unlock();
+    mutexForSendQueue_.lock();
+    google::protobuf::Message* msgToSend = queueToSend_.front();
+    SFG::Proto::Wrapper* actualMessage = new SFG::Proto::Wrapper();
+    actualMessage->set_protoname( msgToSend->GetTypeName() );
+    actualMessage->set_protocontent( msgToSend->SerializeAsString() );
+    zmq::send_result_t sendResult = zmqSocket_.send( zmq::buffer( actualMessage->SerializeAsString() ), zmq::send_flags::dontwait );
+    delete actualMessage;
+    if( sendResult ) {
+      queueToSend_.pop();
+      delete msgToSend;
+      didSend();
+    } else {
+      // logger_->warn( "No message sent!" );
     }
+    mutexForSendQueue_.unlock();
   }
 
   if( canRecv() ) {
