@@ -18,6 +18,9 @@ namespace Networking {
 
 class ReqRep : public ZmqWrap {
   public:
+  enum class Status { Receiving, Sending };
+
+  public:
   ReqRep( std::string const& host, uint16_t port, bool isServer );
   ~ReqRep();
 
@@ -31,7 +34,7 @@ class ReqRep : public ZmqWrap {
   std::shared_ptr< spdlog::logger > logger_;
 
   bool isServer_;
-  bool sendFlag_;
+  ReqRep::Status status_;
 };
 
 }  // namespace Networking

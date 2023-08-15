@@ -9,7 +9,7 @@ ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
     : ZmqWrap( host, port, isServer ? zmq::socket_type::rep : zmq::socket_type::req ),
       logger_( spdlog::get( "ReqRep" ) ),
       isServer_( isServer ),
-      sendFlag_( !isServer ) {
+      status_( isServer ? ReqRep::Status::Receiving : ReqRep::Status::Sending ) {
   logger_->trace( "ReqRep( host: \"{}\", port: {}, isServer: {} )", host_, port_, isServer_ );
 
   if( isServer_ ) {
@@ -42,13 +42,13 @@ bool ReqRep::canSend() const {
   // logger_->trace( "canSend()" );
 
   // logger_->trace( "canSend()~" );
-  return sendFlag_;
+  return status_ == ReqRep::Status::Sending;
 }
 
 void ReqRep::didSend() {
   logger_->trace( "didSend()" );
 
-  sendFlag_ = false;
+  status_ = ReqRep::Status::Receiving;
 
   logger_->trace( "didSend()~" );
 }
@@ -57,13 +57,13 @@ bool ReqRep::canRecv() const {
   // logger_->trace( "canRecv()" );
 
   // logger_->trace( "canRecv()~" );
-  return !sendFlag_;
+  return status_ == ReqRep::Status::Receiving;
 }
 
 void ReqRep::didRecv() {
   logger_->trace( "didRecv()" );
 
-  sendFlag_ = true;
+  status_ = ReqRep::Status::Sending;
 
   logger_->trace( "didRecv()~" );
 }
