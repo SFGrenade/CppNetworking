@@ -13,3 +13,7 @@ message MessageRequest {
 message MessageResponse {
   bool success = 1;
 }
+
+message AllMessages {
+  repeated string messages = 1;
+}

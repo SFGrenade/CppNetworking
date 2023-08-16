@@ -10,7 +10,7 @@ Subscription::Subscription( google::protobuf::Message* message, std::function< v
     : message( message ), callback( callback ) {}
 
 ZmqWrap::ZmqWrap( std::string const& host, uint16_t port, zmq::socket_type socketType )
-    : logger_( spdlog::get( "ZmqWrap" ) ), host_( host ), port_( port ), zmqContext_( 1, 1 ), zmqSocket_( zmqContext_, socketType ), queueToSend_() {
+    : logger_( spdlog::get( "ZmqWrap" ) ), host_( host ), port_( port ), zmqContext_( 1 ), zmqSocket_( zmqContext_, socketType ), queueToSend_() {
   logger_->trace( "ZmqWrap( host: \"{}\", port: {}, socketType: {} )", host, port, static_cast< int >( socketType ) );
 
   zmqSocket_.set( zmq::sockopt::linger, 0 );  // don't wait after destructor is called
@@ -63,7 +63,7 @@ void ZmqWrap::sendMessage( google::protobuf::Message* message ) {
 void ZmqWrap::run() {
   // logger_->trace( "run()" );
 
-  if( canSend() ) {
+  if( canSend() && !queueToSend_.empty() ) {
     mutexForSendQueue_.lock();
     google::protobuf::Message* msgToSend = queueToSend_.front();
     SFG::Proto::Wrapper* actualMessage = new SFG::Proto::Wrapper();
@@ -79,9 +79,7 @@ void ZmqWrap::run() {
       // logger_->warn( "No message sent!" );
     }
     mutexForSendQueue_.unlock();
-  }
-
-  if( canRecv() ) {
+  } else if( canRecv() ) {
     zmq::message_t receivedReply;
     SFG::Proto::Wrapper receivedWrapper;
     zmq::recv_result_t recvResult = zmqSocket_.recv( receivedReply, zmq::recv_flags::dontwait );

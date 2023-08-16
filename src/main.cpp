@@ -64,7 +64,7 @@ void signalHandler( int sigNum ) {
 
   if( isClient ) {
     spdlog::trace( "Constructing Client" );
-    Client *myClient = new Client( "tcp://127.0.0.1", 13337 );
+    Client *myClient = new Client( "tcp://127.0.0.1", 13337, "tcp://127.0.0.1", 13338 );
 
     signalCallback = [myClient]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );
@@ -101,7 +101,7 @@ void signalHandler( int sigNum ) {
     delete myClient;
   } else {
     spdlog::trace( "Constructing Server" );
-    Server *myServer = new Server( 13337 );
+    Server *myServer = new Server( 13337, 13338 );
 
     signalCallback = [myServer]( int32_t signal ) {
       spdlog::trace( "signalCallback( signal: {} )", signal );
@@ -126,7 +126,7 @@ void signalHandler( int sigNum ) {
 }
 
 void InitializeLoggers( std::string filePostfix ) noexcept {
-  std::vector< std::string > allLoggerNames = { "ReqRep", "ZmqWrap", "Client", "Server" };
+  std::vector< std::string > allLoggerNames = { "PubSub", "ReqRep", "ZmqWrap", "Client", "Server" };
 
   auto consoleSink = std::make_shared< spdlog::sinks::stdout_color_sink_mt >();
   consoleSink->set_level( spdlog::level::level_enum::debug );

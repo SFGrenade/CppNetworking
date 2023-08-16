@@ -1,16 +1,16 @@
-#include "wrapper/reqRep.hpp"
+#include "wrapper/pubSub.hpp"
 
 #include "main.pb.h"
 
 namespace SFG {
 namespace Networking {
 
-ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
-    : ZmqWrap( host, port, isServer ? zmq::socket_type::rep : zmq::socket_type::req ),
-      logger_( spdlog::get( "ReqRep" ) ),
+PubSub::PubSub( std::string const& host, uint16_t port, bool isServer )
+    : ZmqWrap( host, port, isServer ? zmq::socket_type::pub : zmq::socket_type::sub ),
+      logger_( spdlog::get( "PubSub" ) ),
       isServer_( isServer ),
-      status_( isServer ? ReqRep::Status::Receiving : ReqRep::Status::Sending ) {
-  logger_->trace( "ReqRep( host: \"{}\", port: {}, isServer: {} )", host, port, isServer );
+      status_( isServer ? PubSub::Status::Sending : PubSub::Status::Receiving ) {
+  logger_->trace( "PubSub( host: \"{}\", port: {}, isServer: {} )", host, port, isServer );
 
   if( isServer_ ) {
     try {
@@ -19,6 +19,7 @@ ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
       logger_->error( "Error during bind: {}", e.what() );
     }
   } else {
+    zmqSocket_.set( zmq::sockopt::subscribe, "" );  // subscribe to all incoming messages
     try {
       zmqSocket_.connect( fmt::format( "{}:{}", host_, port_ ) );
     } catch( const std::exception& e ) {
@@ -26,41 +27,37 @@ ReqRep::ReqRep( std::string const& host, uint16_t port, bool isServer )
     }
   }
 
-  logger_->trace( "ReqRep()~" );
+  logger_->trace( "PubSub()~" );
 }
 
-ReqRep::~ReqRep() {
-  logger_->trace( "~ReqRep()" );
+PubSub::~PubSub() {
+  logger_->trace( "~PubSub()" );
 
-  logger_->trace( "~ReqRep()~" );
+  logger_->trace( "~PubSub()~" );
 }
 
-bool ReqRep::canSend() const {
+bool PubSub::canSend() const {
   // logger_->trace( "canSend()" );
 
   // logger_->trace( "canSend()~" );
-  return status_ == ReqRep::Status::Sending;
+  return status_ == PubSub::Status::Sending;
 }
 
-void ReqRep::didSend() {
+void PubSub::didSend() {
   logger_->trace( "didSend()" );
-
-  status_ = ReqRep::Status::Receiving;
 
   logger_->trace( "didSend()~" );
 }
 
-bool ReqRep::canRecv() const {
+bool PubSub::canRecv() const {
   // logger_->trace( "canRecv()" );
 
   // logger_->trace( "canRecv()~" );
-  return status_ == ReqRep::Status::Receiving;
+  return status_ == PubSub::Status::Receiving;
 }
 
-void ReqRep::didRecv() {
+void PubSub::didRecv() {
   logger_->trace( "didRecv()" );
-
-  status_ = ReqRep::Status::Sending;
 
   logger_->trace( "didRecv()~" );
 }

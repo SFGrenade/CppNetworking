@@ -1,12 +1,22 @@
 #include "client.hpp"
 
+#include <fmt/ranges.h>
+
 namespace SFG {
 
-Client::Client( std::string const& host, uint16_t port )
-    : logger_( spdlog::get( "Client" ) ), network_( host, port, false ), thread_( nullptr ), loop_( false ), waitingForMessageResponse_( false ) {
+Client::Client( std::string const& hostReqRep, uint16_t portReqRep, std::string const& hostPubSub, uint16_t portPubSub )
+    : logger_( spdlog::get( "Client" ) ),
+      rrNetwork_( hostReqRep, portReqRep, false ),
+      psNetwork_( hostPubSub, portPubSub, false ),
+      thread_( nullptr ),
+      loop_( false ),
+      waitingForMessageResponse_( false ) {
   logger_->trace( "Client()" );
-  network_.subscribe( new SFG::Proto::MessageResponse(), [this]( google::protobuf::Message const& message ) {
+  rrNetwork_.subscribe( new SFG::Proto::MessageResponse(), [this]( google::protobuf::Message const& message ) {
     this->onMessageResponse( static_cast< SFG::Proto::MessageResponse const& >( message ) );
+  } );
+  psNetwork_.subscribe( new SFG::Proto::AllMessages(), [this]( google::protobuf::Message const& message ) {
+    this->onAllMessages( static_cast< SFG::Proto::AllMessages const& >( message ) );
   } );
   logger_->trace( "Client()~" );
 }
@@ -31,7 +41,8 @@ void Client::startClient() {
   thread_ = new std::thread( [this]() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
-      this->network_.run();
+      this->rrNetwork_.run();
+      this->psNetwork_.run();
       std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     }
     this->logger_->trace( "thread_()~" );
@@ -65,7 +76,7 @@ void Client::sendMessage( std::string const& message ) {
 
   SFG::Proto::MessageRequest* msg = new SFG::Proto::MessageRequest();
   msg->set_message( message );
-  network_.sendMessage( msg );
+  rrNetwork_.sendMessage( msg );
   waitingForMessageResponse_ = true;
 
   logger_->trace( "sendMessage()~" );
@@ -91,6 +102,14 @@ void Client::onMessageResponse( SFG::Proto::MessageResponse const& repMsg ) {
   waitingForMessageResponse_ = false;
 
   logger_->trace( "onMessageResponse()~" );
+}
+
+void Client::onAllMessages( SFG::Proto::AllMessages const& repMsg ) {
+  logger_->trace( "onAllMessages( [{} messages] )", repMsg.messages_size() );
+
+  logger_->debug( "Messages: [\"{}\"]", fmt::join( repMsg.messages(), "\", \"" ) );
+
+  logger_->trace( "onAllMessages()~" );
 }
 
 }  // namespace SFG

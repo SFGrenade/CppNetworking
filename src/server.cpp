@@ -2,9 +2,14 @@
 
 namespace SFG {
 
-Server::Server( uint16_t port ) : logger_( spdlog::get( "Server" ) ), network_( "tcp://*", port, true ), thread_( nullptr ), loop_( false ) {
+Server::Server( uint16_t portReqRep, uint16_t portPubSub )
+    : logger_( spdlog::get( "Server" ) ),
+      rrNetwork_( "tcp://*", portReqRep, true ),
+      psNetwork_( "tcp://*", portPubSub, true ),
+      thread_( nullptr ),
+      loop_( false ) {
   logger_->trace( "Server()" );
-  network_.subscribe( new SFG::Proto::MessageRequest(), [this]( google::protobuf::Message const& message ) {
+  rrNetwork_.subscribe( new SFG::Proto::MessageRequest(), [this]( google::protobuf::Message const& message ) {
     this->onMessageRequest( static_cast< SFG::Proto::MessageRequest const& >( message ) );
   } );
   logger_->trace( "Server()~" );
@@ -31,7 +36,8 @@ void Server::startServer() {
   thread_ = new std::thread( [this]() {
     this->logger_->trace( "thread_()" );
     while( this->loop_ ) {
-      this->network_.run();
+      this->rrNetwork_.run();
+      this->psNetwork_.run();
       std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     }
     this->logger_->trace( "thread_()~" );
@@ -64,8 +70,19 @@ void Server::onMessageRequest( SFG::Proto::MessageRequest const& reqMsg ) {
   logger_->trace( "onMessageRequest( reqMsg: \"{}\" )", reqMsg.message() );
 
   SFG::Proto::MessageResponse* repMsg = new SFG::Proto::MessageResponse();
-  repMsg->set_success( true );
-  network_.sendMessage( repMsg );
+  if( reqMsg.message().empty() ) {
+    repMsg->set_success( false );
+  } else {
+    messages_.push_back( reqMsg.message() );
+    repMsg->set_success( true );
+  }
+  rrNetwork_.sendMessage( repMsg );
+
+  SFG::Proto::AllMessages* pubMsg = new SFG::Proto::AllMessages();
+  for( auto message : messages_ ) {
+    pubMsg->add_messages( message );
+  }
+  psNetwork_.sendMessage( pubMsg );
 
   logger_->trace( "onMessageRequest()~" );
 }
