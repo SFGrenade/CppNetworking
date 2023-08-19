@@ -6,10 +6,10 @@
 #include <spdlog/spdlog.h>
 #include <string>
 #include <thread>
+#include <zmqPb/pubSub.hpp>
+#include <zmqPb/reqRep.hpp>
 
 #include "main.pb.h"
-#include "wrapper/pubSub.hpp"
-#include "wrapper/reqRep.hpp"
 
 namespace SFG {
 
@@ -28,8 +28,8 @@ class Server {
   private:
   std::shared_ptr< spdlog::logger > logger_;
 
-  SFG::Networking::ReqRep rrNetwork_;
-  SFG::Networking::PubSub psNetwork_;
+  ZmqPb::ReqRep rrNetwork_;
+  ZmqPb::PubSub psNetwork_;
   std::thread* thread_;
   bool loop_;
 

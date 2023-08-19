@@ -2,11 +2,6 @@ syntax = "proto3";
 
 package SFG.Proto;
 
-message Wrapper {
-  string protoName = 1;
-  string protoContent = 2;
-}
-
 message MessageRequest {
   string message = 1;
 }

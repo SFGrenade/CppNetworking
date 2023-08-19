@@ -23,6 +23,7 @@ add_requires("protobuf-cpp")
 add_requires("spdlog")
 add_requireconfs("spdlog", {configs = {fmt_external = true}})
 add_defines("SPDLOG_FMT_EXTERNAL")
+add_requires("zmqpb")
 
 set_warnings("allextra")
 
@@ -58,6 +59,7 @@ target("CppNetwork")
     add_packages("fmt")
     add_packages("protobuf-cpp", {public = true})
     add_packages("spdlog")
+    add_packages("zmqpb")
 
     add_rules("protobuf.cpp")
 
@@ -65,12 +67,3 @@ target("CppNetwork")
     add_headerfiles("include/**.hpp")
     add_files("proto/**.proto", {proto_public = true})
     add_files("src/**.cpp")
-
-    --after_build(function (target)
-    --    import("core.project.config")
-    --    os.cp("Resources", path.join(config.buildir(), config.plat(), config.arch(), config.mode()))
-    --end)
-    --after_install(function (target)
-    --    import("core.project.config")
-    --    os.cp("Resources", target.installdir())
-    --end)
