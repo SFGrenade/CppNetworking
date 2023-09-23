@@ -39,7 +39,7 @@ void signalHandler( int sigNum ) {
   }
 }
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202302L
 #define STRING_CONTAINS( str1, str2 ) ( str1 ).contains( ( str2 ) )
 #else
 #define STRING_CONTAINS( str1, str2 ) ( str1 ).find( ( str2 ) ) != std::string::npos
